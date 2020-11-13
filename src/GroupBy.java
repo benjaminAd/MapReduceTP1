@@ -1,10 +1,3 @@
-
-import java.io.IOException;
-import java.time.Instant;
-import java.util.logging.FileHandler;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
@@ -18,69 +11,105 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
+import java.io.IOException;
+import java.time.Instant;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
+
 public class GroupBy {
-	private static final String INPUT_PATH = "input-groupBy/";
-	private static final String OUTPUT_PATH = "output/groupBy-";
-	private static final Logger LOG = Logger.getLogger(GroupBy.class.getName());
+    private static final String INPUT_PATH = "input-groupBy/";
+    private static final String OUTPUT_PATH = "output/groupBy-";
+    private static final Logger LOG = Logger.getLogger(GroupBy.class.getName());
 
-	static {
-		System.setProperty("java.util.logging.SimpleFormatter.format", "%5$s%n%6$s");
+    static {
+        System.setProperty("java.util.logging.SimpleFormatter.format", "%5$s%n%6$s");
 
-		try {
-			FileHandler fh = new FileHandler("out.log");
-			fh.setFormatter(new SimpleFormatter());
-			LOG.addHandler(fh);
-		} catch (SecurityException | IOException e) {
-			System.exit(1);
-		}
-	}
+        try {
+            FileHandler fh = new FileHandler("out.log");
+            fh.setFormatter(new SimpleFormatter());
+            LOG.addHandler(fh);
+        } catch (SecurityException | IOException e) {
+            System.exit(1);
+        }
+    }
 
-	public static class Map extends Mapper<LongWritable, Text, Text, DoubleWritable> {
+    public static class Map extends Mapper<LongWritable, Text, Text, DoubleWritable> {
 
-		@Override
-		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-			String ValueToString = value.toString();
-			String[] ValuesArray = ValueToString.split(",");
-			if(ValuesArray[0].equals("Row ID")) return;
+        @Override
+        public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+            String ValueToString = value.toString();
+
+            String[] ValuesArray = ValueToString.split(",");
+            if (ValuesArray[0].equals("Row ID")) return;
+			/* GroupBy Customer_Id
 			String Customer_ID = ValuesArray[5];
 			Double profit = Double.valueOf(ValuesArray[ValuesArray.length-1]);
 			context.write(new Text(Customer_ID), new DoubleWritable(profit));
-		}
-	}
+			*/
 
-	public static class Reduce extends Reducer<Text, DoubleWritable, Text, DoubleWritable> {
+           /* GroupBy Order Date and State
+           String DateAndState = ValuesArray[2] + " " + ValuesArray[10];
+            Double profit = Double.valueOf(ValuesArray[ValuesArray.length - 1]);
+            context.write(new Text(DateAndState), new DoubleWritable(profit));*/
 
-		@Override
-		public void reduce(Text key, Iterable<DoubleWritable> values, Context context)
-				throws IOException, InterruptedException {
-			Double totalProfit = (double) 0;
-			for(DoubleWritable val : values) {
-				if(val.get() < 0) totalProfit -= val.get();
-				else totalProfit += val.get();
-			}
-			context.write(key, new DoubleWritable(totalProfit));
-		}
-	}
+           /* GroupBy Order Date and Category
+           String DateAndCategory = ValuesArray[2] + " " + ValuesArray[14];
+            double profit = Double.parseDouble(ValuesArray[ValuesArray.length - 1]);
+            context.write(new Text(DateAndCategory), new DoubleWritable(profit));*/
 
-	public static void main(String[] args) throws Exception {
-		Configuration conf = new Configuration();
-		conf.set("fs.file.impl", "com.conga.services.hadoop.patch.HADOOP_7682.WinLocalFileSystem");
-		Job job = new Job(conf, "GroupBy");
+            /* Nombre de produits distincts par commande
+            String Order_ID = ValuesArray[1];
+            context.write(new Text(Order_ID), new DoubleWritable((double) 1));*/
 
-		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(Text.class);
+            String Order_ID = ValuesArray[1];
+            double quantity = Double.parseDouble(ValuesArray[ValuesArray.length - 3]);
+            context.write(new Text(Order_ID), new DoubleWritable(quantity));
 
-		job.setMapperClass(Map.class);
-		job.setReducerClass(Reduce.class);
+        }
+    }
 
-		job.setOutputValueClass(DoubleWritable.class); 
+    public static class Reduce extends Reducer<Text, DoubleWritable, Text, DoubleWritable> {
 
-		job.setInputFormatClass(TextInputFormat.class);
-		job.setOutputFormatClass(TextOutputFormat.class);
+        @Override
+        public void reduce(Text key, Iterable<DoubleWritable> values, Context context)
+                throws IOException, InterruptedException {
+           /* Calcul de profit
+           double totalProfit = (double) 0;
+            for (DoubleWritable val : values) {
+                if (val.get() < 0) totalProfit -= val.get();
+                else totalProfit += val.get();
+            }
+            context.write(key, new DoubleWritable(totalProfit));*/
 
-		FileInputFormat.addInputPath(job, new Path(INPUT_PATH));
-		FileOutputFormat.setOutputPath(job, new Path(OUTPUT_PATH + Instant.now().getEpochSecond()));
+            //Calcul de produits et utile aussi pour le calcul d'exemplaire
+            double NbProduits = 0;
+            for (DoubleWritable val : values) {
+                NbProduits += val.get();
+            }
+            context.write(key, new DoubleWritable(NbProduits));
+        }
+    }
 
-		job.waitForCompletion(true);
-	}
+    public static void main(String[] args) throws Exception {
+        Configuration conf = new Configuration();
+        conf.set("fs.file.impl", "com.conga.services.hadoop.patch.HADOOP_7682.WinLocalFileSystem");
+        Job job = new Job(conf, "GroupBy");
+
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(Text.class);
+
+        job.setMapperClass(Map.class);
+        job.setReducerClass(Reduce.class);
+
+        job.setOutputValueClass(DoubleWritable.class);
+
+        job.setInputFormatClass(TextInputFormat.class);
+        job.setOutputFormatClass(TextOutputFormat.class);
+
+        FileInputFormat.addInputPath(job, new Path(INPUT_PATH));
+        FileOutputFormat.setOutputPath(job, new Path(OUTPUT_PATH + Instant.now().getEpochSecond()));
+
+        job.waitForCompletion(true);
+    }
 }
