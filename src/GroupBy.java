@@ -38,7 +38,7 @@ public class GroupBy {
     }
 
     public static class Map extends Mapper<LongWritable, Text, Text, Text> {
-
+    //public static class Map extends Mapper<LongWritable, Text, Text, DoubleWritable> {
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             String ValueToString = value.toString();
@@ -75,10 +75,12 @@ public class GroupBy {
     }
 
     public static class Reduce extends Reducer<Text, Text, Text, IntWritable> {
+    //public static class Reduce extends Reducer<Text, Text, Text, DoubleWritable> {
 
         @Override
         public void reduce(Text key, Iterable<Text> values, Context context)
                 throws IOException, InterruptedException {
+        //public void reduce(Text key, Iterable<DoubleWritable> values, Context context) throws IOException, InterruptedException {
            /* Calcul de profit
            double totalProfit = (double) 0;
             for (DoubleWritable val : values) {
