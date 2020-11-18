@@ -62,6 +62,7 @@ public class GroupBy {
             String Order_ID = ValuesArray[1];
             context.write(new Text(Order_ID), new DoubleWritable((double) 1));*/
 
+            //Nombre total d'exemplaire par commande
             String Order_ID = ValuesArray[1];
             double quantity = Double.parseDouble(ValuesArray[ValuesArray.length - 3]);
             context.write(new Text(Order_ID), new DoubleWritable(quantity));
