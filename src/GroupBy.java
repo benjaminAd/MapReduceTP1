@@ -1,6 +1,7 @@
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -13,6 +14,8 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -34,7 +37,7 @@ public class GroupBy {
         }
     }
 
-    public static class Map extends Mapper<LongWritable, Text, Text, DoubleWritable> {
+    public static class Map extends Mapper<LongWritable, Text, Text, Text> {
 
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
@@ -58,22 +61,23 @@ public class GroupBy {
             double profit = Double.parseDouble(ValuesArray[ValuesArray.length - 1]);
             context.write(new Text(DateAndCategory), new DoubleWritable(profit));*/
 
-            /* Nombre de produits distincts par commande
+             //Nombre de produits distincts par commande
             String Order_ID = ValuesArray[1];
-            context.write(new Text(Order_ID), new DoubleWritable((double) 1));*/
+            String ProductId =ValuesArray[ValuesArray.length-8];
+            context.write(new Text(Order_ID), new Text(ProductId));
 
             //Nombre total d'exemplaire par commande
-            String Order_ID = ValuesArray[1];
+           /* String Order_ID = ValuesArray[1];
             double quantity = Double.parseDouble(ValuesArray[ValuesArray.length - 3]);
-            context.write(new Text(Order_ID), new DoubleWritable(quantity));
+            context.write(new Text(Order_ID), new DoubleWritable(quantity));*/
 
         }
     }
 
-    public static class Reduce extends Reducer<Text, DoubleWritable, Text, DoubleWritable> {
+    public static class Reduce extends Reducer<Text, Text, Text, IntWritable> {
 
         @Override
-        public void reduce(Text key, Iterable<DoubleWritable> values, Context context)
+        public void reduce(Text key, Iterable<Text> values, Context context)
                 throws IOException, InterruptedException {
            /* Calcul de profit
            double totalProfit = (double) 0;
@@ -83,12 +87,21 @@ public class GroupBy {
             }
             context.write(key, new DoubleWritable(totalProfit));*/
 
-            //Calcul de produits et utile aussi pour le calcul d'exemplaire
-            double NbProduits = 0;
+        	//Calcul du nombre de produits distincts
+        	List<String> ProductIds = new ArrayList<>();
+        	for(Text d : values) {
+        		String productId = d.toString();
+        		if(!ProductIds.contains(productId)) ProductIds.add(productId);
+        	}
+        	context.write(key, new IntWritable(ProductIds.size()));
+        	
+            //Calcul d'exemplaire
+            /*double NbExemplaire = 0;
             for (DoubleWritable val : values) {
-                NbProduits += val.get();
+                NbExemplaire += val.get();
             }
-            context.write(key, new DoubleWritable(NbProduits));
+            context.write(key, new DoubleWritable(NbExemplaire));*/
+        	
         }
     }
 
@@ -103,7 +116,7 @@ public class GroupBy {
         job.setMapperClass(Map.class);
         job.setReducerClass(Reduce.class);
 
-        job.setOutputValueClass(DoubleWritable.class);
+        job.setOutputValueClass(Text.class);
 
         job.setInputFormatClass(TextInputFormat.class);
         job.setOutputFormatClass(TextOutputFormat.class);
