@@ -45,9 +45,15 @@ public class TAM {
 			String[] Values = value.toString().split(";");
 			if (Values[0].equals("course"))
 				return;
-			String NumLigne = Values[4];
-			String[] time = Values[Values.length - 2].split(":");
-			context.write(new Text(NumLigne + "," + time[0]), new IntWritable(1));
+//			String NumLigne = Values[4];
+//			String[] time = Values[Values.length - 2].split(":");
+//			context.write(new Text(NumLigne + "," + time[0]), new IntWritable(1));
+
+//			Pour chaque station, donner le nombre de trams et bus par jour.
+//			String station = Values[3];
+//			context.write(new Text(station), new IntWritable(1));
+
+//			Pour chaque station et chaque heure, afficher une information X_tram correspondant au trafic des trams, avec X_tram="faible" si au plus 8 trams sont prévus (noter qu'une ligne de circulation a deux sens, donc au plus 4 trams par heure et sens), X_tram="moyen" si entre 9 et 18 trams sont prévus, et X="fort" pour toute autre valeur. Afficher la même information pour les bus. Pour les stations où il a seulement des trams (ou des bus) il faut afficher une seule information	
 		}
 
 	}
@@ -56,14 +62,21 @@ public class TAM {
 		@Override
 		public void reduce(Text key, Iterable<IntWritable> values, Context context)
 				throws IOException, InterruptedException {
-			String[] dataKeys = key.toString().split(",");
-			String ligne = "Ligne " + dataKeys[0];
-			String time = dataKeys[1] + "h";
-			int acc = 0;
-			for (IntWritable i : values) {
-				acc += i.get();
-			}
-			context.write(new Text(ligne), new Text(time + ", " + acc));
+//			String[] dataKeys = key.toString().split(",");
+//			String ligne = "Ligne " + dataKeys[0];
+//			String time = dataKeys[1] + "h";
+//			int acc = 0;
+//			for (IntWritable i : values) {
+//				acc += i.get();
+//			}			
+//			context.write(new Text(ligne), new Text(time + ", " + acc));
+//
+// 			Pour chaque station, donner le nombre de trams et bus par jour.
+//			int acc = 0;
+//			for (IntWritable i : values) {
+//				acc += i.get();
+//			}
+//			context.write(key, new Text("" + acc));
 		}
 	}
 
