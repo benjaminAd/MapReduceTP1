@@ -25,17 +25,23 @@ public class WordCount {
 	private static final Logger LOG = Logger.getLogger(WordCount.class.getName());
 
 	/*
-	 * Ce bloc initialise le logger 'LOG'. Celui-ci permet d'afficher des messages dans la console, le classique System.out.print() ne fonctionnant pas dans le contexte d'exécution normal de Hadoop.
-	 * En plus d'être affiché dans la console, les messages seront aussi présents dans le fichier 'out.log' qui apparaitra à la racine du projet.
+	 * Ce bloc initialise le logger 'LOG'. Celui-ci permet d'afficher des messages
+	 * dans la console, le classique System.out.print() ne fonctionnant pas dans le
+	 * contexte d'exécution normal de Hadoop. En plus d'être affiché dans la
+	 * console, les messages seront aussi présents dans le fichier 'out.log' qui
+	 * apparaitra à la racine du projet.
 	 */
 	static {
 		/*
-		 * La chaine %5$s%n%6$s permet de spécifier au logger le format de la sortie qu'il renverra.
-		 * '%' est le caractère spécifiant qu'une substitution va avoir lieu à son emplacement, les caractères suivants définissent le type de la substitution.
-		 * '5$' dénote que la valeur du 5ème argument de l'objet interne représentant le message de log sera récupéré et utilisé pour la substitution. Cette valeur correspond à la String du message.
-		 * 's' spécifie que la valeur sera formattée comme une chaine de caractère (String).
-		 * '%n' représente un saut de ligne.
-		 * '%6$s' affiche la pile d'exécution en cas d'exception.
+		 * La chaine %5$s%n%6$s permet de spécifier au logger le format de la sortie
+		 * qu'il renverra. '%' est le caractère spécifiant qu'une substitution va
+		 * avoir lieu à son emplacement, les caractères suivants définissent le type
+		 * de la substitution. '5$' dénote que la valeur du 5ème argument de l'objet
+		 * interne représentant le message de log sera récupéré et utilisé pour la
+		 * substitution. Cette valeur correspond à la String du message. 's' spécifie
+		 * que la valeur sera formattée comme une chaine de caractère (String). '%n'
+		 * représente un saut de ligne. '%6$s' affiche la pile d'exécution en cas
+		 * d'exception.
 		 */
 		System.setProperty("java.util.logging.SimpleFormatter.format", "%5$s%n%6$s");
 
@@ -78,7 +84,8 @@ public class WordCount {
 			for (IntWritable val : values)
 				sum += val.get();
 
-			if(sum >= 2 ) context.write(key, new IntWritable(sum));
+			if (sum >= 2)
+				context.write(key, new IntWritable(sum));
 		}
 	}
 
@@ -97,12 +104,15 @@ public class WordCount {
 		job.setOutputFormatClass(TextOutputFormat.class);
 
 		FileInputFormat.addInputPath(job, new Path(INPUT_PATH));
-		
+
 		/*
 		 * Génère un nouveau dossier de sortie à chaque exécution du programme.
-		 * Cette stratégie est utilisée dans le cadre du TP car pour Hadoop, si le dossier de sortie existe déjà lors d'une exécution, celui-ci renvoie une erreur.
-		 * Le fait de conserver les sorties précédentes permet, éventuellement, de comparer les nouvelles sorties lors de l'écriture du programme.
-		 * Il conviendra de supprimer de temps en temps les trop vieux dossiers de sortie.
+		 * Cette stratégie est utilisée dans le cadre du TP car pour Hadoop, si le
+		 * dossier de sortie existe déjà lors d'une exécution, celui-ci renvoie une
+		 * erreur. Le fait de conserver les sorties précédentes permet,
+		 * éventuellement, de comparer les nouvelles sorties lors de l'écriture du
+		 * programme. Il conviendra de supprimer de temps en temps les trop vieux
+		 * dossiers de sortie.
 		 */
 		FileOutputFormat.setOutputPath(job, new Path(OUTPUT_PATH + Instant.now().getEpochSecond()));
 
