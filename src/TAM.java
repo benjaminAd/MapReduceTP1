@@ -54,6 +54,10 @@ public class TAM {
 //			context.write(new Text(station), new IntWritable(1));
 
 //			Pour chaque station et chaque heure, afficher une information X_tram correspondant au trafic des trams, avec X_tram="faible" si au plus 8 trams sont prévus (noter qu'une ligne de circulation a deux sens, donc au plus 4 trams par heure et sens), X_tram="moyen" si entre 9 et 18 trams sont prévus, et X="fort" pour toute autre valeur. Afficher la même information pour les bus. Pour les stations où il a seulement des trams (ou des bus) il faut afficher une seule information	
+			String station = Values[3];
+			String trajet = Values[3] + "," + Values[5];
+			String[] time = Values[Values.length - 2].split(":");
+			context.write(new Text(station + "," + time[0]), new IntWritable(1));
 		}
 
 	}
@@ -77,6 +81,24 @@ public class TAM {
 //				acc += i.get();
 //			}
 //			context.write(key, new Text("" + acc));
+
+//			Pour chaque station et chaque heure, afficher une information X_tram correspondant au trafic des trams, avec X_tram="faible" si au plus 8 trams sont prévus (noter qu'une ligne de circulation a deux sens, donc au plus 4 trams par heure et sens), X_tram="moyen" si entre 9 et 18 trams sont prévus, et X="fort" pour toute autre valeur. Afficher la même information pour les bus. Pour les stations où il a seulement des trams (ou des bus) il faut afficher une seule information
+			int acc = 0;
+			for (IntWritable t : values) {
+				acc += t.get();
+			}
+
+			String X_tram = "";
+			if (acc <= 8)
+				X_tram = "faible";
+			else if ((acc >= 9) && (acc <= 18))
+				X_tram = "moyen";
+			else
+				X_tram = "fort";
+			String[] datas = key.toString().split(",");
+			String station = datas[0];
+			String time = datas[1];
+			context.write(new Text(station + " " + time), new Text(X_tram));
 		}
 	}
 
