@@ -37,9 +37,8 @@ public class GroupBy {
 		}
 	}
 
-	public static class Map extends Mapper<LongWritable, Text, Text, Text> {
-		// public static class Map extends Mapper<LongWritable, Text, Text,
-		// DoubleWritable> {
+//	public static class Map extends Mapper<LongWritable, Text, Text, Text> {
+	public static class Map extends Mapper<LongWritable, Text, Text, DoubleWritable> {
 		@Override
 		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
 			String ValueToString = value.toString();
@@ -47,11 +46,11 @@ public class GroupBy {
 			String[] ValuesArray = ValueToString.split(",");
 			if (ValuesArray[0].equals("Row ID"))
 				return;
-			/*
-			 * GroupBy Customer_Id String Customer_ID = ValuesArray[5]; Double profit =
-			 * Double.valueOf(ValuesArray[ValuesArray.length-1]); context.write(new
-			 * Text(Customer_ID), new DoubleWritable(profit));
-			 */
+
+//			  GroupBy Customer_Id 
+			String Customer_ID = ValuesArray[5];
+			Double profit = Double.valueOf(ValuesArray[ValuesArray.length - 1]);
+			context.write(new Text(Customer_ID), new DoubleWritable(profit));
 
 			/*
 			 * GroupBy Order Date and State String DateAndState = ValuesArray[2] + " " +
@@ -68,9 +67,11 @@ public class GroupBy {
 			 */
 
 			// Nombre de produits distincts par commande
-			String Order_ID = ValuesArray[1];
-			String ProductId = ValuesArray[ValuesArray.length - 8];
-			context.write(new Text(Order_ID), new Text(ProductId));
+			/*
+			 * String Order_ID = ValuesArray[1]; String ProductId =
+			 * ValuesArray[ValuesArray.length - 8]; context.write(new Text(Order_ID), new
+			 * Text(ProductId));
+			 */
 
 			// Nombre total d'exemplaire par commande
 			/*
@@ -82,28 +83,30 @@ public class GroupBy {
 		}
 	}
 
-	public static class Reduce extends Reducer<Text, Text, Text, IntWritable> {
-		// public static class Reduce extends Reducer<Text, Text, Text, DoubleWritable>
-		// {
+	// public static class Reduce extends Reducer<Text, Text, Text, IntWritable> {
+	public static class Reduce extends Reducer<Text, DoubleWritable, Text, DoubleWritable> {
 
-		@Override
-		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-			// public void reduce(Text key, Iterable<DoubleWritable> values, Context
-			// context) throws IOException, InterruptedException {
-			/*
-			 * Calcul de profit double totalProfit = (double) 0; for (DoubleWritable val :
-			 * values) { if (val.get() < 0) totalProfit -= val.get(); else totalProfit +=
-			 * val.get(); } context.write(key, new DoubleWritable(totalProfit));
-			 */
+//		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+		public void reduce(Text key, Iterable<DoubleWritable> values, Context context)
+				throws IOException, InterruptedException {
+
+//			  Calcul de profit 
+			double totalProfit = (double) 0;
+			for (DoubleWritable val : values) {
+				if (val.get() < 0)
+					totalProfit -= val.get();
+				else
+					totalProfit += val.get();
+			}
+			context.write(key, new DoubleWritable(totalProfit));
 
 			// Calcul du nombre de produits distincts
-			List<String> ProductIds = new ArrayList<>();
-			for (Text d : values) {
-				String productId = d.toString();
-				if (!ProductIds.contains(productId))
-					ProductIds.add(productId);
-			}
-			context.write(key, new IntWritable(ProductIds.size()));
+			/*
+			 * List<String> ProductIds = new ArrayList<>(); for (Text d : values) { String
+			 * productId = d.toString(); if (!ProductIds.contains(productId))
+			 * ProductIds.add(productId); } context.write(key, new
+			 * IntWritable(ProductIds.size()));
+			 */
 
 			// Calcul d'exemplaire
 			/*
@@ -120,12 +123,12 @@ public class GroupBy {
 		Job job = new Job(conf, "GroupBy");
 
 		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(Text.class);
+		job.setOutputValueClass(DoubleWritable.class);
 
 		job.setMapperClass(Map.class);
 		job.setReducerClass(Reduce.class);
 
-		job.setOutputValueClass(Text.class);
+		//job.setOutputValueClass(Text.class);
 
 		job.setInputFormatClass(TextInputFormat.class);
 		job.setOutputFormatClass(TextOutputFormat.class);

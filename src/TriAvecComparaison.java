@@ -12,6 +12,7 @@ import java.util.logging.SimpleFormatter;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -114,7 +115,7 @@ public class TriAvecComparaison {
 				}
 			}
 			String[] KeyArray = Key.split("/");
-			//System.out.println(Key);
+			// System.out.println(Key);
 			Key = KeyArray[2] + "/" + KeyArray[0] + "/" + KeyArray[1];
 			context.write(new Text(Key), new Text(Values));
 		}
@@ -143,32 +144,125 @@ public class TriAvecComparaison {
 		}
 	}
 
+	public static class MapA extends Mapper<LongWritable, Text, Text, DoubleWritable> {
+		@Override
+		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+			String ValueToString = value.toString();
+
+			String[] ValuesArray = ValueToString.split(",");
+			if (ValuesArray[0].equals("Row ID"))
+				return;
+			String Customer_ID = ValuesArray[5];
+			String Customer_Name = ValuesArray[6];
+			Double profit = Double.valueOf(ValuesArray[ValuesArray.length - 1]);
+			context.write(new Text(Customer_ID + "," + Customer_Name), new DoubleWritable(profit));
+		}
+	}
+
+	// =========================================================================
+	// REDUCER
+	// =========================================================================
+
+	public static class ReduceA extends Reducer<Text, DoubleWritable, Text, Text> {
+
+		public void reduce(Text key, Iterable<DoubleWritable> values, Context context)
+				throws InterruptedException, IOException {
+
+			double totalProfit = (double) 0;
+			for (DoubleWritable val : values) {
+				if (val.get() < 0)
+					totalProfit -= val.get();
+				else
+					totalProfit += val.get();
+			}
+			String res = "" + totalProfit;
+			context.write(new Text(key.toString() + "," + res), new Text());
+
+		}
+	}
+
+	public static class MapB extends Mapper<LongWritable, Text, Text, Text> {
+
+		@Override
+		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+			String line = value.toString();
+			// System.out.println("line = " + line);
+			String[] data = line.split(",");
+			context.write(new Text(data[2]), new Text(data[0] + "," + data[1]));
+		}
+	}
+
+	// =========================================================================
+	// REDUCER
+	// =========================================================================
+
+	public static class ReduceB extends Reducer<Text, Text, Text, Text> {
+
+		public void reduce(Text key, Iterable<Text> values, Context context) throws InterruptedException, IOException {
+			for (Text value : values) {
+				String[] data = value.toString().split(",");
+				context.write(new Text(data[0]), new Text(data[1]));
+			}
+
+		}
+	}
+
 	// =========================================================================
 	// MAIN
 	// =========================================================================
 
 	public static void main(String[] args) throws Exception {
-		Configuration conf = new Configuration();
-		conf.set("fs.file.impl", "com.conga.services.hadoop.patch.HADOOP_7682.WinLocalFileSystem");
-		Job job = new Job(conf, "9-Sort");
-
 		/*
+		 * Configuration conf = new Configuration(); conf.set("fs.file.impl",
+		 * "com.conga.services.hadoop.patch.HADOOP_7682.WinLocalFileSystem"); Job job =
+		 * new Job(conf, "9-Sort");
+		 * 
+		 * 
 		 * Affectation de la classe du comparateur au job. Celui-ci sera appelé durant
 		 * la phase de shuffle.
+		 * 
+		 * job.setSortComparatorClass(TextInverseComparator.class);
+		 * 
+		 * job.setOutputKeyClass(Text.class); job.setOutputValueClass(Text.class);
+		 * 
+		 * job.setMapperClass(Map.class);
+		 * 
+		 * job.setInputFormatClass(TextInputFormat.class);
+		 * job.setOutputFormatClass(TextOutputFormat.class);
+		 * 
+		 * FileInputFormat.addInputPath(job, new Path(INPUT_PATH));
+		 * FileOutputFormat.setOutputPath(job, new Path(OUTPUT_PATH +
+		 * Instant.now().getEpochSecond()));
 		 */
-		job.setSortComparatorClass(TextInverseComparator.class);
 
-		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(Text.class);
+//		job.waitForCompletion(true);
+		Configuration confA = new Configuration();
+		confA.set("fs.file.impl", "com.conga.services.hadoop.patch.HADOOP_7682.WinLocalFileSystem");
+		Job jobA = new Job(confA, "Profit-GroupBy");
+		jobA.setOutputKeyClass(Text.class);
+		jobA.setOutputValueClass(DoubleWritable.class);
+		jobA.setMapperClass(MapA.class);
+		jobA.setReducerClass(ReduceA.class);
+		jobA.setInputFormatClass(TextInputFormat.class);
+		jobA.setOutputFormatClass(TextOutputFormat.class);
+		long instant = Instant.now().getEpochSecond();
+		FileInputFormat.addInputPath(jobA, new Path(INPUT_PATH));
+		FileOutputFormat.setOutputPath(jobA, new Path("output/Profits-" + instant));
+		jobA.waitForCompletion(true);
 
-		job.setMapperClass(Map.class);
+		Configuration confB = new Configuration();
+		confB.set("fs.file.impl", "com.conga.services.hadoop.patch.HADOOP_7682.WinLocalFileSystem");
+		Job jobB = new Job(confB, "Profit-sort");
+		jobB.setSortComparatorClass(TextInverseComparator.class);
+		jobB.setOutputKeyClass(Text.class);
+		jobB.setOutputValueClass(Text.class);
+		jobB.setMapperClass(MapB.class);
+		jobB.setReducerClass(ReduceB.class);
+		jobB.setInputFormatClass(TextInputFormat.class);
+		jobB.setOutputFormatClass(TextOutputFormat.class);
+		FileInputFormat.addInputPath(jobB, new Path("output/Profits-" + instant));
+		FileOutputFormat.setOutputPath(jobB, new Path("output/Profits-sort-" + instant));
+		jobB.waitForCompletion(true);
 
-		job.setInputFormatClass(TextInputFormat.class);
-		job.setOutputFormatClass(TextOutputFormat.class);
-
-		FileInputFormat.addInputPath(job, new Path(INPUT_PATH));
-		FileOutputFormat.setOutputPath(job, new Path(OUTPUT_PATH + Instant.now().getEpochSecond()));
-
-		job.waitForCompletion(true);
 	}
 }
