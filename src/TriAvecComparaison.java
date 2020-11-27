@@ -114,7 +114,7 @@ public class TriAvecComparaison {
 				}
 			}
 			String[] KeyArray = Key.split("/");
-			System.out.println(Key);
+			//System.out.println(Key);
 			Key = KeyArray[2] + "/" + KeyArray[0] + "/" + KeyArray[1];
 			context.write(new Text(Key), new Text(Values));
 		}
