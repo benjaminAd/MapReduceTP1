@@ -47,14 +47,14 @@ public class TAM {
 				return;
 			String NumLigne = Values[4];
 			String[] time = Values[Values.length - 2].split(":");
-			String station = Values[1];
-			if(station.contains("OCCI"))context.write(new Text(NumLigne + "," + time[0]), new IntWritable(1));
+			String station = Values[3];
+			if(station.equals("OCCITANIE"))context.write(new Text(NumLigne + "," + time[0]), new IntWritable(1));
 
 //			Pour chaque station, donner le nombre de trams et bus par jour.
 //			String station = Values[3];
 //			context.write(new Text(station), new IntWritable(1));
 
-//			Pour chaque station et chaque heure, afficher une information X_tram correspondant au trafic des trams, avec X_tram="faible" si au plus 8 trams sont prévus (noter qu'une ligne de circulation a deux sens, donc au plus 4 trams par heure et sens), X_tram="moyen" si entre 9 et 18 trams sont prévus, et X="fort" pour toute autre valeur. Afficher la même information pour les bus. Pour les stations où il a seulement des trams (ou des bus) il faut afficher une seule information	
+//			Pour chaque station et chaque heure, afficher une information X_tram correspondant au trafic des trams, avec X_tram="faible" si au plus 8 trams sont prï¿½vus (noter qu'une ligne de circulation a deux sens, donc au plus 4 trams par heure et sens), X_tram="moyen" si entre 9 et 18 trams sont prï¿½vus, et X="fort" pour toute autre valeur. Afficher la mï¿½me information pour les bus. Pour les stations oï¿½ il a seulement des trams (ou des bus) il faut afficher une seule information	
 //			String station = Values[3];
 //			String trajet = Values[3] + "," + Values[5];
 //			String[] time = Values[Values.length - 2].split(":");
@@ -83,7 +83,7 @@ public class TAM {
 //			}
 //			context.write(key, new Text("" + acc));
 
-//			Pour chaque station et chaque heure, afficher une information X_tram correspondant au trafic des trams, avec X_tram="faible" si au plus 8 trams sont prévus (noter qu'une ligne de circulation a deux sens, donc au plus 4 trams par heure et sens), X_tram="moyen" si entre 9 et 18 trams sont prévus, et X="fort" pour toute autre valeur. Afficher la même information pour les bus. Pour les stations où il a seulement des trams (ou des bus) il faut afficher une seule information
+//			Pour chaque station et chaque heure, afficher une information X_tram correspondant au trafic des trams, avec X_tram="faible" si au plus 8 trams sont prï¿½vus (noter qu'une ligne de circulation a deux sens, donc au plus 4 trams par heure et sens), X_tram="moyen" si entre 9 et 18 trams sont prï¿½vus, et X="fort" pour toute autre valeur. Afficher la mï¿½me information pour les bus. Pour les stations oï¿½ il a seulement des trams (ou des bus) il faut afficher une seule information
 //			int acc = 0;
 //			for (IntWritable t : values) {
 //				acc += t.get();

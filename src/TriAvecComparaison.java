@@ -1,6 +1,11 @@
 
 import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -20,13 +25,13 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
-
 // =========================================================================
 // COMPARATEURS
 // =========================================================================
 
 /**
- * Comparateur qui inverse la méthode de comparaison d'un sous-type T de WritableComparable (ie. une clé).
+ * Comparateur qui inverse la méthode de comparaison d'un sous-type T de
+ * WritableComparable (ie. une clé).
  */
 @SuppressWarnings("rawtypes")
 class InverseComparator<T extends WritableComparable> extends WritableComparator {
@@ -36,8 +41,9 @@ class InverseComparator<T extends WritableComparable> extends WritableComparator
 	}
 
 	/**
-	 * Cette fonction définit l'ordre de comparaison entre 2 objets de type T.
-	 * Dans notre cas nous voulons simplement inverser la valeur de retour de la méthode T.compareTo.
+	 * Cette fonction définit l'ordre de comparaison entre 2 objets de type T. Dans
+	 * notre cas nous voulons simplement inverser la valeur de retour de la méthode
+	 * T.compareTo.
 	 * 
 	 * @return 0 si a = b <br>
 	 *         x > 0 si a > b <br>
@@ -46,9 +52,9 @@ class InverseComparator<T extends WritableComparable> extends WritableComparator
 	@SuppressWarnings("unchecked")
 	@Override
 	public int compare(WritableComparable a, WritableComparable b) {
-
 		// On inverse le retour de la méthode de comparaison du type
 		return -a.compareTo(b);
+
 	}
 }
 
@@ -61,7 +67,6 @@ class TextInverseComparator extends InverseComparator<Text> {
 		super(Text.class);
 	}
 }
-
 
 // =========================================================================
 // CLASSE MAIN
@@ -84,7 +89,6 @@ public class TriAvecComparaison {
 		}
 	}
 
-
 	// =========================================================================
 	// MAPPER
 	// =========================================================================
@@ -93,6 +97,26 @@ public class TriAvecComparaison {
 
 		@Override
 		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+			String line = value.toString();
+			String[] ValuesArray = line.split(",");
+			if (ValuesArray[0].equals("Row ID"))
+				return;
+			String Key = "";
+			String Values = "";
+			for (int i = 0; i < ValuesArray.length; i++) {
+				if (i == 3)
+					Key = ValuesArray[i];
+				else {
+					if (i == 0)
+						Values += ValuesArray[i];
+					else
+						Values += ValuesArray[i];
+				}
+			}
+			String[] KeyArray = Key.split("/");
+			System.out.println(Key);
+			Key = KeyArray[2] + "/" + KeyArray[0] + "/" + KeyArray[1];
+			context.write(new Text(Key), new Text(Values));
 		}
 	}
 
@@ -100,9 +124,22 @@ public class TriAvecComparaison {
 	// REDUCER
 	// =========================================================================
 
-	public static class Reduce extends Reducer<Text, IntWritable, Text, IntWritable> {
+	public static class Reduce extends Reducer<Text, Text, Text, Text> {
 
-		public void reduce(Text key, Iterable<IntWritable> values, Context context) {
+		public void reduce(Text key, Iterable<Text> values, Context context) throws InterruptedException, IOException {
+			String s = "";
+			for (Text t : values) {
+				s += t.toString();
+			}
+//			String[] Date = key.toString().split("/");
+//			String c = "";
+//			for (int i = Date.length - 1; i >= 0; i--) {
+//				if (i == 0)
+//					c += Date[i];
+//				else
+//					c += Date[i] + "/";
+//			}
+			context.write(key, new Text(s));
 		}
 	}
 
@@ -112,15 +149,15 @@ public class TriAvecComparaison {
 
 	public static void main(String[] args) throws Exception {
 		Configuration conf = new Configuration();
-
+		conf.set("fs.file.impl", "com.conga.services.hadoop.patch.HADOOP_7682.WinLocalFileSystem");
 		Job job = new Job(conf, "9-Sort");
 
 		/*
-		 * Affectation de la classe du comparateur au job.
-		 * Celui-ci sera appelé durant la phase de shuffle.
+		 * Affectation de la classe du comparateur au job. Celui-ci sera appelé durant
+		 * la phase de shuffle.
 		 */
 		job.setSortComparatorClass(TextInverseComparator.class);
-		
+
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(Text.class);
 
