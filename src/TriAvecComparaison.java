@@ -204,13 +204,13 @@ public class TriAvecComparaison {
 	// REDUCER
 	// =========================================================================
 
-	public static class ReduceB extends Reducer<Text, Text, Text, Text> {
+	public static class ReduceB extends Reducer<DoubleWritable, Text, Text, Text> {
 
 		public void reduce(DoubleWritable key, Iterable<Text> values, Context context)
 				throws InterruptedException, IOException {
 			for (Text value : values) {
 				String[] data = value.toString().split(",");
-				System.out.println("data0ReduceB = " + data[0]);
+				context.write(new Text(data[0]), new Text(data[1]));
 			}
 
 		}
