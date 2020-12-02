@@ -69,6 +69,14 @@ class TextInverseComparator extends InverseComparator<Text> {
 	}
 }
 
+class DoubleInverseComparator extends InverseComparator<DoubleWritable> {
+
+	public DoubleInverseComparator() {
+		super(DoubleWritable.class);
+		// TODO Auto-generated constructor stub
+	}
+
+}
 // =========================================================================
 // CLASSE MAIN
 // =========================================================================
@@ -181,14 +189,14 @@ public class TriAvecComparaison {
 		}
 	}
 
-	public static class MapB extends Mapper<LongWritable, Text, Text, Text> {
+	public static class MapB extends Mapper<LongWritable, Text, DoubleWritable, Text> {
 
 		@Override
 		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
 			String line = value.toString();
 			// System.out.println("line = " + line);
 			String[] data = line.split(",");
-			context.write(new Text(data[2]), new Text(data[0] + "," + data[1]));
+			context.write(new DoubleWritable(Double.parseDouble(data[2])), new Text(data[0] + "," + data[1]));
 		}
 	}
 
@@ -198,10 +206,11 @@ public class TriAvecComparaison {
 
 	public static class ReduceB extends Reducer<Text, Text, Text, Text> {
 
-		public void reduce(Text key, Iterable<Text> values, Context context) throws InterruptedException, IOException {
+		public void reduce(DoubleWritable key, Iterable<Text> values, Context context)
+				throws InterruptedException, IOException {
 			for (Text value : values) {
 				String[] data = value.toString().split(",");
-				context.write(new Text(data[0]), new Text(data[1]));
+				System.out.println("data0ReduceB = " + data[0]);
 			}
 
 		}
@@ -253,8 +262,8 @@ public class TriAvecComparaison {
 		Configuration confB = new Configuration();
 		confB.set("fs.file.impl", "com.conga.services.hadoop.patch.HADOOP_7682.WinLocalFileSystem");
 		Job jobB = new Job(confB, "Profit-sort");
-		jobB.setSortComparatorClass(TextInverseComparator.class);
-		jobB.setOutputKeyClass(Text.class);
+		jobB.setSortComparatorClass(DoubleInverseComparator.class);
+		jobB.setOutputKeyClass(DoubleWritable.class);
 		jobB.setOutputValueClass(Text.class);
 		jobB.setMapperClass(MapB.class);
 		jobB.setReducerClass(ReduceB.class);
