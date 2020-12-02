@@ -22,7 +22,6 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
-
 /*
  * Jusqu'à présent nous avons défini nos mappers et reducers comme des classes internes à notre classe principale.
  * Dans des applications réelles de map-reduce cela ne sera généralement pas le cas, les classes seront probablement localisées dans d'autres fichiers.
@@ -34,7 +33,7 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 // MAPPER
 // =========================================================================
 
-class Map extends Mapper<LongWritable, Text, Text, IntWritable> {
+class Map extends Mapper<LongWritable, Text, Text, Text> {
 	private final static IntWritable one = new IntWritable(1);
 	private final static String emptyWords[] = { "" };
 
@@ -42,13 +41,15 @@ class Map extends Mapper<LongWritable, Text, Text, IntWritable> {
 	public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
 		String line = value.toString();
 
-		String[] words = line.split("\\s+");
+		String[] data = line.split(" ");
 
-		if (Arrays.equals(words, emptyWords))
+		if (Arrays.equals(data, emptyWords))
 			return;
-
-		for (String word : words)
-			context.write(new Text(word), one);
+//		System.out.println(data.length);
+		context.write(new Text(data[0]), new Text(data[1]));
+		/*
+		 * for (String word : words) context.write(new Text(word), one);
+		 */
 	}
 }
 
@@ -58,13 +59,15 @@ class Map extends Mapper<LongWritable, Text, Text, IntWritable> {
 
 class Reduce extends Reducer<Text, IntWritable, Text, IntWritable> {
 	/**
-	 * Map avec tri suivant l'ordre naturel de la clé (la clé représentant la fréquence d'un ou plusieurs mots).
-	 * Utilisé pour conserver les k mots les plus fréquents.
+	 * Map avec tri suivant l'ordre naturel de la clé (la clé représentant la
+	 * fréquence d'un ou plusieurs mots). Utilisé pour conserver les k mots les
+	 * plus fréquents.
 	 * 
 	 * Il associe une fréquence à une liste de mots.
 	 */
 	private TreeMap<Integer, List<Text>> sortedWords = new TreeMap<>();
-	private int nbsortedWords = 0;
+	// private int nbsortedWords = 0;
+	private int nbLigne = 0;
 	private int k;
 
 	/**
@@ -79,34 +82,30 @@ class Reduce extends Reducer<Text, IntWritable, Text, IntWritable> {
 	@Override
 	public void reduce(Text key, Iterable<IntWritable> values, Context context)
 			throws IOException, InterruptedException {
-		int sum = 0;
+		/*
+		 * int sum = 0;
+		 * 
+		 * for (IntWritable val : values) sum += val.get();
+		 * 
+		 * // On copie car l'objet key reste le même entre chaque appel du reducer Text
+		 * keyCopy = new Text(key);
+		 * 
+		 * // Fréquence déjà présente if (sortedWords.containsKey(sum))
+		 * sortedWords.get(sum).add(keyCopy); else { List<Text> words = new
+		 * ArrayList<>();
+		 * 
+		 * words.add(keyCopy); sortedWords.put(sum, words); }
+		 * 
+		 * // Nombre de mots enregistrés atteint : on supprime le mot le moins
+		 * fréquent // (le premier dans sortedWords) if (nbsortedWords == k) { Integer
+		 * firstKey = sortedWords.firstKey(); List<Text> words =
+		 * sortedWords.get(firstKey); words.remove(words.size() - 1);
+		 * 
+		 * if (words.isEmpty()) sortedWords.remove(firstKey); } else nbsortedWords++;
+		 */
+		if (nbLigne < k) {
 
-		for (IntWritable val : values)
-			sum += val.get();
-
-		// On copie car l'objet key reste le même entre chaque appel du reducer
-		Text keyCopy = new Text(key);
-
-		// Fréquence déjà présente
-		if (sortedWords.containsKey(sum))
-			sortedWords.get(sum).add(keyCopy);
-		else {
-			List<Text> words = new ArrayList<>();
-
-			words.add(keyCopy);
-			sortedWords.put(sum, words);
 		}
-
-		// Nombre de mots enregistrés atteint : on supprime le mot le moins fréquent (le premier dans sortedWords)
-		if (nbsortedWords == k) {
-			Integer firstKey = sortedWords.firstKey();
-			List<Text> words = sortedWords.get(firstKey);
-			words.remove(words.size() - 1);
-
-			if (words.isEmpty())
-				sortedWords.remove(firstKey);
-		} else
-			nbsortedWords++;
 	}
 
 	/**
@@ -131,8 +130,8 @@ class Reduce extends Reducer<Text, IntWritable, Text, IntWritable> {
 }
 
 public class TopkWordCount {
-	private static final String INPUT_PATH = "input-wordCount/";
-	private static final String OUTPUT_PATH = "output/TopkWordCount-";
+	private static final String INPUT_PATH = "output/Profits-sort-1606939167";
+	private static final String OUTPUT_PATH = "output/TopkWordCountGroupBy-";
 	private static final Logger LOG = Logger.getLogger(TopkWordCount.class.getName());
 
 	static {
@@ -148,7 +147,8 @@ public class TopkWordCount {
 	}
 
 	/**
-	 * Ce programme permet le passage d'une valeur k en argument de la ligne de commande.
+	 * Ce programme permet le passage d'une valeur k en argument de la ligne de
+	 * commande.
 	 */
 	public static void main(String[] args) throws Exception {
 		// Borne 'k' du topk
@@ -171,6 +171,7 @@ public class TopkWordCount {
 		}
 
 		Configuration conf = new Configuration();
+		conf.set("fs.file.impl", "com.conga.services.hadoop.patch.HADOOP_7682.WinLocalFileSystem");
 		conf.setInt("k", k);
 
 		Job job = new Job(conf, "wordcount");
