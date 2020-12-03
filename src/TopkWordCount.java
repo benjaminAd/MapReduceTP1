@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
@@ -11,6 +13,7 @@ import java.util.logging.SimpleFormatter;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -33,7 +36,7 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 // MAPPER
 // =========================================================================
 
-class Map extends Mapper<LongWritable, Text, Text, Text> {
+class Map extends Mapper<LongWritable, Text, DoubleWritable, Text> {
 	private final static IntWritable one = new IntWritable(1);
 	private final static String emptyWords[] = { "" };
 
@@ -41,12 +44,12 @@ class Map extends Mapper<LongWritable, Text, Text, Text> {
 	public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
 		String line = value.toString();
 
-		String[] data = line.split(" ");
+		String[] data = line.split(",");
 
 		if (Arrays.equals(data, emptyWords))
 			return;
 //		System.out.println(data.length);
-		context.write(new Text(data[0]), new Text(data[1]));
+		context.write(new DoubleWritable(Double.parseDouble(data[2])), new Text(data[0] + "/" + data[1]));
 		/*
 		 * for (String word : words) context.write(new Text(word), one);
 		 */
@@ -57,7 +60,7 @@ class Map extends Mapper<LongWritable, Text, Text, Text> {
 // REDUCER
 // =========================================================================
 
-class Reduce extends Reducer<Text, IntWritable, Text, IntWritable> {
+class Reduce extends Reducer<DoubleWritable, Text, Text, Text> {
 	/**
 	 * Map avec tri suivant l'ordre naturel de la clé (la clé représentant la
 	 * fréquence d'un ou plusieurs mots). Utilisé pour conserver les k mots les
@@ -65,7 +68,8 @@ class Reduce extends Reducer<Text, IntWritable, Text, IntWritable> {
 	 * 
 	 * Il associe une fréquence à une liste de mots.
 	 */
-	private TreeMap<Integer, List<Text>> sortedWords = new TreeMap<>();
+	// private TreeMap<Text, List<Text>> sortedWords = new TreeMap<>();
+	private TreeMap<DoubleWritable, Text> LigneByProfits = new TreeMap<>();
 	// private int nbsortedWords = 0;
 	private int nbLigne = 0;
 	private int k;
@@ -80,7 +84,7 @@ class Reduce extends Reducer<Text, IntWritable, Text, IntWritable> {
 	}
 
 	@Override
-	public void reduce(Text key, Iterable<IntWritable> values, Context context)
+	public void reduce(DoubleWritable key, Iterable<Text> values, Context context)
 			throws IOException, InterruptedException {
 		/*
 		 * int sum = 0;
@@ -92,19 +96,24 @@ class Reduce extends Reducer<Text, IntWritable, Text, IntWritable> {
 		 * 
 		 * // Fréquence déjà présente if (sortedWords.containsKey(sum))
 		 * sortedWords.get(sum).add(keyCopy); else { List<Text> words = new
-		 * ArrayList<>();
-		 * 
-		 * words.add(keyCopy); sortedWords.put(sum, words); }
+		 * ArrayList<>(); words.add(keyCopy); sortedWords.put(sum, words); }
 		 * 
 		 * // Nombre de mots enregistrés atteint : on supprime le mot le moins
 		 * fréquent // (le premier dans sortedWords) if (nbsortedWords == k) { Integer
 		 * firstKey = sortedWords.firstKey(); List<Text> words =
-		 * sortedWords.get(firstKey); words.remove(words.size() - 1);
-		 * 
-		 * if (words.isEmpty()) sortedWords.remove(firstKey); } else nbsortedWords++;
+		 * sortedWords.get(firstKey); words.remove(words.size() - 1); if
+		 * (words.isEmpty()) sortedWords.remove(firstKey); } else nbsortedWords++;
 		 */
-		if (nbLigne < k) {
+		String res = "";
+		for (Text t : values) {
 
+			res += t.toString();
+		}
+		if (nbLigne < k) {
+//			System.out.println("key = " + key.toString() + " res = " + res);
+			LigneByProfits.put(new DoubleWritable(key.get()), new Text(res));
+			nbLigne += 1;
+//			System.out.println(nbLigne);
 		}
 	}
 
@@ -115,22 +124,37 @@ class Reduce extends Reducer<Text, IntWritable, Text, IntWritable> {
 	 */
 	@Override
 	public void cleanup(Context context) throws IOException, InterruptedException {
-		Integer[] nbofs = sortedWords.keySet().toArray(new Integer[0]);
-
+//		Set<DoubleWritable> SetDouble = LigneByProfits.keySet();
+//		System.out.println("SetDouble = " + SetDouble.size());
+		System.out.println("TreeMap = " + LigneByProfits);
+		List<Double> Profits = new ArrayList<>();
+		for (Entry<DoubleWritable, Text> entry : LigneByProfits.entrySet()) {
+			Profits.add(entry.getKey().get());
+		}
+//		int l = 0;
+//		for (DoubleWritable t : SetDouble) {
+//			Profits[l] = t.get();
+//			l++;
+//		}
 		// Parcours en sens inverse pour obtenir un ordre descendant
-		int i = nbofs.length;
-
+		int i = Profits.size();
+		System.out.println("i = " + i);
 		while (i-- != 0) {
-			Integer nbof = nbofs[i];
-
-			for (Text words : sortedWords.get(nbof))
-				context.write(words, new IntWritable(nbof));
+			double profit = Profits.get(i);
+			Text t = LigneByProfits.get(new DoubleWritable(profit));
+			String[] data = t.toString().split(",");
+			int j = 0;
+			for (String d : data) {
+				String[] va = d.split("/");
+				context.write(new Text(va[0]), new Text(va[1]));
+			}
+			// context.write(, new IntWritable(nbof));
 		}
 	}
 }
 
 public class TopkWordCount {
-	private static final String INPUT_PATH = "output/Profits-sort-1606939167";
+	private static final String INPUT_PATH = "output/Profits-1606939167";
 	private static final String OUTPUT_PATH = "output/TopkWordCountGroupBy-";
 	private static final Logger LOG = Logger.getLogger(TopkWordCount.class.getName());
 
@@ -176,8 +200,8 @@ public class TopkWordCount {
 
 		Job job = new Job(conf, "wordcount");
 
-		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(IntWritable.class);
+		job.setOutputKeyClass(DoubleWritable.class);
+		job.setOutputValueClass(Text.class);
 
 		job.setMapperClass(Map.class);
 		job.setReducerClass(Reduce.class);
