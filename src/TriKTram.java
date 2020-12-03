@@ -1,4 +1,3 @@
-
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -19,39 +18,17 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
-/*
- * Jusqu'à présent nous avons défini nos mappers et reducers comme des classes internes à notre classe principale.
- * Dans des applications réelles de map-reduce cela ne sera généralement pas le cas, les classes seront probablement localisées dans d'autres fichiers.
- * Dans cet exemple, nous avons défini Map et Reduce en dehors de notre classe principale.
- * Il se pose alors le problème du passage du paramètre 'k' dans notre reducer, car il n'est en effet plus possible de déclarer un paramètre k dans notre classe principale qui serait partagé avec ses classes internes ; c'est la que la Configuration du Job entre en jeu.
- */
-
-// =========================================================================
-// MAPPER
-// =========================================================================
-
-class Map extends Mapper<LongWritable, Text, DoubleWritable, Text> {
-	private final static IntWritable one = new IntWritable(1);
-	private final static String emptyWords[] = { "" };
+class MapB extends Mapper<LongWritable, Text, DoubleWritable, Text> {
 
 	@Override
 	public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-		String line = value.toString();
 
-		String[] data = line.split(",");
-
-		if (Arrays.equals(data, emptyWords))
-			return;
-//		System.out.println(data.length);
-		context.write(new DoubleWritable(Double.parseDouble(data[2])), new Text(data[0] + "/" + data[1]));
-		/*
-		 * for (String word : words) context.write(new Text(word), one);
-		 */
 	}
 }
 
@@ -59,14 +36,7 @@ class Map extends Mapper<LongWritable, Text, DoubleWritable, Text> {
 // REDUCER
 // =========================================================================
 
-class Reduce extends Reducer<DoubleWritable, Text, Text, Text> {
-	/**
-	 * Map avec tri suivant l'ordre naturel de la clé (la clé représentant la
-	 * fréquence d'un ou plusieurs mots). Utilisé pour conserver les k mots les
-	 * plus fréquents.
-	 * 
-	 * Il associe une fréquence à une liste de mots.
-	 */
+class ReduceB extends Reducer<DoubleWritable, Text, Text, Text> {
 	// private TreeMap<Text, List<Text>> sortedWords = new TreeMap<>();
 	private TreeMap<DoubleWritable, Text> LigneByProfits = new TreeMap<>();
 	// private int nbsortedWords = 0;
@@ -103,17 +73,7 @@ class Reduce extends Reducer<DoubleWritable, Text, Text, Text> {
 		 * sortedWords.get(firstKey); words.remove(words.size() - 1); if
 		 * (words.isEmpty()) sortedWords.remove(firstKey); } else nbsortedWords++;
 		 */
-		String res = "";
-		for (Text t : values) {
 
-			res += t.toString();
-		}
-		if (nbLigne < k) {
-//			System.out.println("key = " + key.toString() + " res = " + res);
-			LigneByProfits.put(new DoubleWritable(key.get()), new Text(res));
-			nbLigne += 1;
-//			System.out.println(nbLigne);
-		}
 	}
 
 	/**
@@ -152,10 +112,10 @@ class Reduce extends Reducer<DoubleWritable, Text, Text, Text> {
 	}
 }
 
-public class TopkWordCount {
+public class TriKTram {
 	private static final String INPUT_PATH = "output/Profits-1606939167";
 	private static final String OUTPUT_PATH = "output/TopkWordCountGroupBy-";
-	private static final Logger LOG = Logger.getLogger(TopkWordCount.class.getName());
+	private static final Logger LOG = Logger.getLogger(TriKTram.class.getName());
 
 	static {
 		System.setProperty("java.util.logging.SimpleFormatter.format", "%5$s%n%6$s");
@@ -166,6 +126,71 @@ public class TopkWordCount {
 			LOG.addHandler(fh);
 		} catch (SecurityException | IOException e) {
 			System.exit(1);
+		}
+	}
+
+	public static class MapA extends Mapper<LongWritable, Text, Text, IntWritable> {
+		@Override
+		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+			String[] Values = value.toString().split(";");
+			if (Values[0].equals("course"))
+				return;
+//			String NumLigne = Values[4];
+//			String[] time = Values[Values.length - 2].split(":");
+//			String station = Values[3];
+//			if (station.equals("OCCITANIE"))
+//				context.write(new Text(NumLigne + "," + time[0]), new IntWritable(1));
+
+//			Pour chaque station, donner le nombre de trams et bus par jour.
+//			String station = Values[3];
+//			context.write(new Text(station), new IntWritable(1));
+
+//			Pour chaque station et chaque heure, afficher une information X_tram correspondant au trafic des trams, avec X_tram="faible" si au plus 8 trams sont pr�vus (noter qu'une ligne de circulation a deux sens, donc au plus 4 trams par heure et sens), X_tram="moyen" si entre 9 et 18 trams sont pr�vus, et X="fort" pour toute autre valeur. Afficher la m�me information pour les bus. Pour les stations o� il a seulement des trams (ou des bus) il faut afficher une seule information	
+			String station = Values[3];
+			String trajet = Values[3] + "," + Values[5];
+			String[] time = Values[Values.length - 2].split(":");
+			context.write(new Text(station + "," + time[0]), new IntWritable(1));
+		}
+
+	}
+
+	public static class ReduceA extends Reducer<Text, IntWritable, Text, Text> {
+		@Override
+		public void reduce(Text key, Iterable<IntWritable> values, Context context)
+				throws IOException, InterruptedException {
+//			String[] dataKeys = key.toString().split(",");
+//			String ligne = "Ligne " + dataKeys[0];
+//			String time = dataKeys[1] + "h";
+//			int acc = 0;
+//			for (IntWritable i : values) {
+//				acc += i.get();
+//			}
+//			context.write(new Text(ligne), new Text(time + ", " + acc));
+
+// 			Pour chaque station, donner le nombre de trams et bus par jour.
+//			int acc = 0;
+//			for (IntWritable i : values) {
+//				acc += i.get();
+//			}
+//			context.write(key, new Text("" + acc));
+
+//			Pour chaque station et chaque heure, afficher une information X_tram correspondant au trafic des trams, avec X_tram="faible" si au plus 8 trams sont pr�vus (noter qu'une ligne de circulation a deux sens, donc au plus 4 trams par heure et sens), X_tram="moyen" si entre 9 et 18 trams sont pr�vus, et X="fort" pour toute autre valeur. Afficher la m�me information pour les bus. Pour les stations o� il a seulement des trams (ou des bus) il faut afficher une seule information
+			int acc = 0;
+			for (IntWritable t : values) {
+				acc += t.get();
+			}
+
+			String X_tram = "";
+			if (acc <= 8)
+				X_tram = "faible";
+			else if ((acc >= 9) && (acc <= 18))
+				X_tram = "moyen";
+			else
+				X_tram = "fort";
+			String[] datas = key.toString().split(",");
+			String station = datas[0];
+			String time = datas[1];
+			context.write(new Text(station + "," + time + "," + X_tram), new Text());
 		}
 	}
 
@@ -192,24 +217,42 @@ public class TopkWordCount {
 			LOG.severe("Error for the k argument: " + e.getMessage());
 			System.exit(1);
 		}
+		Configuration confA = new Configuration();
+		confA.set("fs.file.impl", "com.conga.services.hadoop.patch.HADOOP_7682.WinLocalFileSystem");
+		Job jobA = new Job(confA, "RecupTram");
+
+		jobA.setOutputKeyClass(Text.class);
+		jobA.setOutputValueClass(Text.class);
+
+		jobA.setMapperClass(MapA.class);
+		jobA.setReducerClass(ReduceA.class);
+
+		jobA.setInputFormatClass(TextInputFormat.class);
+		jobA.setOutputFormatClass(TextOutputFormat.class);
+
+		long instant = Instant.now().getEpochSecond();
+		FileInputFormat.addInputPath(jobA, new Path("TAM_MMM_OffreJour"));
+		FileOutputFormat.setOutputPath(jobA, new Path("output/TamLastExo-" + instant));
+
+		jobA.waitForCompletion(true);
 
 		Configuration conf = new Configuration();
 		conf.set("fs.file.impl", "com.conga.services.hadoop.patch.HADOOP_7682.WinLocalFileSystem");
 		conf.setInt("k", k);
 
-		Job job = new Job(conf, "wordcount");
+		Job job = new Job(conf, "Tritram");
 
 		job.setOutputKeyClass(DoubleWritable.class);
 		job.setOutputValueClass(Text.class);
 
-		job.setMapperClass(Map.class);
-		job.setReducerClass(Reduce.class);
+		job.setMapperClass(MapB.class);
+		job.setReducerClass(ReduceB.class);
 
 		job.setInputFormatClass(TextInputFormat.class);
 		job.setOutputFormatClass(TextOutputFormat.class);
 
 		FileInputFormat.addInputPath(job, new Path(INPUT_PATH));
-		FileOutputFormat.setOutputPath(job, new Path(OUTPUT_PATH + Instant.now().getEpochSecond()));
+		FileOutputFormat.setOutputPath(job, new Path(OUTPUT_PATH + instant));
 
 		job.waitForCompletion(true);
 	}
